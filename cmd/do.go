@@ -22,44 +22,39 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
 	"log"
 
-	"github.com/charmbracelet/charm/kv"
+	"github.com/rogerscuall/gotm/adapters/db"
 	"github.com/rogerscuall/gotm/packages/types/tasks"
+	"github.com/rogerscuall/gotm/ports"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 // completeCmd represents the complete command
 var doCmd = &cobra.Command{
-	Use:         "do",
-	Short:       "Do will mark a task as completed",
-	Args: cobra.MinimumNArgs(1),
+	Use:   "do",
+	Short: "Do will mark a task as completed",
+	Args:  cobra.MinimumNArgs(1),
 	Long: `Do will mark a task as completed.
 it needs a ID in the format of: gotm do <ID>`,
 	Run: func(cmd *cobra.Command, args []string) {
 		dbName = viper.GetString("db_name")
-		db, err := kv.OpenWithDefaults(dbName)
-		if err != nil {
-			panic(err)
-		}
-		db.Sync()
-		defer db.Close()
+		var dbAdapter ports.DbPort
+		var err error
+		dbAdapter, err = db.NewAdapter(dbName)
+		defer dbAdapter.CloseDbConnection()
+
 		id := args[0]
-		bTask, err := db.Get([]byte(id))
+		bTask, err := dbAdapter.GetVal(id)
 		if err != nil {
-			log.Fatal("Error getting task: ", err)
+			log.Fatal("The task was not found: ", err)
 		}
 		var task tasks.Task
-		if err = task.FromBytes(bTask); err != nil {
-			log.Fatal("Error unmarshalling task: ", err)
-		}
+		task.FromBytes(bTask)
+		fmt.Println(task)
 		task.Complete()
-		bTask = tasks.ToBytes(task)
-		err = db.Set([]byte(id), bTask)
-		if err != nil {
-			panic(err)
-		}
 	},
 }
 

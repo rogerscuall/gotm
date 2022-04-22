@@ -39,9 +39,9 @@ var rootCmd = &cobra.Command{
 	Short: "Manage a task list",
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	Run: func(cmd *cobra.Command, args []string) { 
-		fmt.Println("add called with db:", dbName)
-	},
+	// Run: func(cmd *cobra.Command, args []string) { 
+	// 	fmt.Println("add called with db:", dbName)
+	// },
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

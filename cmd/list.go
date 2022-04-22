@@ -24,16 +24,45 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/charmbracelet/charm/kv"
+	"github.com/dgraph-io/badger/v3"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all the tasks",
+	Short: "List all tasks",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("list called")
+		dbName = viper.GetString("db_name")
+		db, err := kv.OpenWithDefaults(dbName)
+		if err != nil {
+			panic(err)
+		}
+		db.Sync()
+		defer db.Close()
+		db.View(listTasks)
 	},
+}
+
+func listTasks(txn *badger.Txn) error {
+	opts := badger.DefaultIteratorOptions
+	opts.PrefetchSize = 10
+	it := txn.NewIterator(opts)
+	defer it.Close()
+	for it.Rewind(); it.Valid(); it.Next() {
+		item := it.Item()
+		k := item.Key()
+		err := item.Value(func(v []byte) error {
+			fmt.Printf("%s - %s\n", k, v)
+			return nil
+		})
+		if err != nil {
+			panic(err)
+		}
+	}
+	return nil
 }
 
 func init() {
